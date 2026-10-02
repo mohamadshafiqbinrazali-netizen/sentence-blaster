@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#08152b" />
+    <meta name="description" content="Sentence Blaster 3D — Year 2 English guided writing game." />
+    <title>Sentence Blaster 3D</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect rx='14' width='64' height='64' fill='%2308152b'/%3E%3Cpath d='M15 37h24l12-8-12-8H15l7 8z' fill='%233ee7ff'/%3E%3Ccircle cx='27' cy='29' r='5' fill='%23ffbd4a'/%3E%3Cpath d='M18 41h15v7H18z' fill='%23fff'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three.module.min.js",
+          "three/addons/": "./vendor/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="game-shell" aria-label="Sentence Blaster 3D game">
+      <canvas id="game-canvas" aria-label="3D game world"></canvas>
+
+      <section id="loading-screen" class="screen active" aria-live="polite">
+        <div class="loading-card">
+          <div class="brand-mark" aria-hidden="true">SB</div>
+          <h1>Sentence Blaster 3D</h1>
+          <p id="loading-label">Preparing mission…</p>
+          <div class="progress-track"><span id="loading-progress"></span></div>
+        </div>
+      </section>
+
+      <section id="start-screen" class="screen" aria-labelledby="game-title">
+        <div class="start-card">
+          <div class="title-row">
+            <div class="brand-mark" aria-hidden="true">SB</div>
+            <div>
+              <p class="eyebrow">YEAR 2 ENGLISH</p>
+              <h1 id="game-title">Sentence Blaster <span>3D</span></h1>
+            </div>
+          </div>
+          <p class="mission-copy">Repair the sentences. Restore Capital City.</p>
+
+          <form id="access-form" novalidate>
+            <div class="field-row">
+              <label for="session-code">Class code</label>
+              <div class="inline-control">
+                <input id="session-code" name="sessionCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="1234" required />
+                <button id="verify-code" class="button secondary" type="button">Check code</button>
+              </div>
+              <small id="code-status">Demo code: 1234</small>
+            </div>
+
+            <div id="student-fields" class="hidden">
+              <div class="field-row">
+                <label for="student-name">Your name</label>
+                <select id="student-name" name="studentName" required>
+                  <option value="">Choose your name</option>
+                </select>
+              </div>
+              <div class="session-pill">
+                <span id="session-class">2 Bestari</span>
+                <strong id="session-title">Capital Letters &amp; Full Stops</strong>
+              </div>
+              <button id="start-game" class="button primary" type="submit">Start mission</button>
+            </div>
+          </form>
+
+          <div class="control-guide" aria-label="Controls">
+            <div><kbd>WASD</kbd><span>Move</span></div>
+            <div><kbd>Mouse</kbd><span>Aim</span></div>
+            <div><kbd>Click</kbd><span>Blast</span></div>
+            <div class="touch-tip"><kbd>Touch</kbd><span>Phone controls appear automatically</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="hud" class="hidden" aria-live="polite">
+        <div class="hud-top">
+          <div class="hud-chip identity-chip">
+            <span id="hud-name">Player</span>
+            <small id="hud-class">Class</small>
+          </div>
+          <div class="mission-panel">
+            <span id="mission-number">MISSION 1 / 5</span>
+            <strong id="mission-title">Capital Blast</strong>
+            <p id="mission-instruction">Find the sentence station.</p>
+          </div>
+          <div class="hud-chip score-chip">
+            <span id="hud-score">0</span>
+            <small>POINTS</small>
+          </div>
+        </div>
+
+        <div id="sentence-strip" class="sentence-strip hidden">
+          <span id="sentence-label">Sentence</span>
+          <strong id="sentence-progress"></strong>
+        </div>
+
+        <div id="crosshair" aria-hidden="true"><span></span><span></span></div>
+        <div id="hit-marker" aria-hidden="true">×</div>
+
+        <div class="hud-bottom">
+          <div class="health-panel"><span>ENERGY</span><div><i id="health-bar"></i></div><strong id="health-value">100</strong></div>
+          <button id="hint-button" class="hud-button" type="button">Hint <span id="hint-count">3</span></button>
+          <button id="pause-button" class="hud-button" type="button" aria-label="Pause game">Ⅱ</button>
+        </div>
+      </section>
+
+      <section id="mobile-controls" class="hidden" aria-label="Mobile game controls">
+        <div id="move-zone" class="move-zone">
+          <div id="joystick-base" class="joystick-base"><div id="joystick-knob" class="joystick-knob"></div></div>
+        </div>
+        <div id="look-zone" class="look-zone" aria-hidden="true"></div>
+        <button id="mobile-fire" class="round-control fire-control" type="button">BLAST</button>
+        <button id="mobile-jump" class="round-control jump-control" type="button">JUMP</button>
+      </section>
+
+      <section id="writing-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="writing-title">
+        <div class="modal-card writing-card">
+          <p class="eyebrow" id="writing-step">FINAL WRITING</p>
+          <h2 id="writing-title">Write one sentence</h2>
+          <div id="scene-card" class="scene-card" aria-label="Picture prompt">
+            <div class="scene-icon" id="scene-icon">📦</div>
+            <div><span id="scene-label">Look carefully</span><strong id="scene-description">A blue box</strong></div>
+          </div>
+          <div id="plan-chips" class="plan-chips"></div>
+          <label for="sentence-input">Your sentence</label>
+          <textarea id="sentence-input" rows="2" autocomplete="off" autocapitalize="sentences" spellcheck="false" placeholder="Type your sentence here."></textarea>
+          <p id="writing-feedback" class="feedback" aria-live="assertive"></p>
+          <div class="modal-actions">
+            <button id="writing-hint" class="button secondary" type="button">Show a hint</button>
+            <button id="submit-sentence" class="button primary" type="button">Check sentence</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="pause-screen" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+        <div class="modal-card compact-card">
+          <p class="eyebrow">MISSION PAUSED</p>
+          <h2 id="pause-title">Ready to continue?</h2>
+          <button id="resume-button" class="button primary" type="button">Continue mission</button>
+          <button id="restart-button" class="button danger" type="button">Restart game</button>
+        </div>
+      </section>
+
+      <section id="result-screen" class="screen" aria-labelledby="result-title">
+        <div class="result-card">
+          <div id="result-badge" class="result-badge">A</div>
+          <p class="eyebrow">MISSION COMPLETE</p>
+          <h1 id="result-title">Capital City is safe!</h1>
+          <p id="result-summary">You repaired every sentence.</p>
+          <div class="result-grid">
+            <div><strong id="final-score">0</strong><span>Score</span></div>
+            <div><strong id="final-accuracy">0%</strong><span>Accuracy</span></div>
+            <div><strong id="final-time">00:00</strong><span>Time</span></div>
+          </div>
+          <div id="standard-results" class="standard-results"></div>
+          <p id="save-status" class="save-status">Saving your result…</p>
+          <button id="play-again" class="button primary" type="button">Play again</button>
+        </div>
+      </section>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </main>
+
+    <script src="./config.js"></script>
+    <script type="module" src="./game.js"></script>
+  </body>
+</html>

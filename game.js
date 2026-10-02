@@ -19,6 +19,7 @@ const dom = {
   codeStatus: $("#code-status"),
   studentFields: $("#student-fields"),
   studentName: $("#student-name"),
+  className: $("#class-name"),
   sessionClass: $("#session-class"),
   sessionTitle: $("#session-title"),
   hud: $("#hud"),
@@ -72,90 +73,100 @@ const dom = {
 const demoSession = {
   id: "DEMO-SESSION",
   code: String(CONFIG.demoCode || "1234"),
-  className: "2 Bestari",
+  className: "Open session",
   title: "Capital Letters & Full Stops",
   attemptsAllowed: 3,
-  students: ["Adam", "Aisyah", "Hakimy", "Mikail", "Safra", "Zayrul"]
+  questionCount: 15
 };
 
-const missions = [
-  {
-    id: "M1",
-    standard: "4.3.1",
-    title: "Capital Blast",
-    instruction: "Shoot the correct first word: ___ cat is black.",
-    type: "choice",
-    position: new THREE.Vector3(0, 1.9, 10),
-    choices: ["my", "MY", "My"],
-    correct: "My",
-    hint: "A sentence begins with one capital letter.",
-    evidence: "Uses a capital letter at the beginning of a sentence."
-  },
-  {
-    id: "M2",
-    standard: "4.3.1",
-    title: "Full Stop Factory",
-    instruction: "The dog is running ___  Shoot the correct punctuation.",
-    type: "choice",
-    position: new THREE.Vector3(0, 1.9, -1),
-    choices: ["?", ".", "!"],
-    correct: ".",
-    hint: "This is a statement. It ends with a full stop.",
-    evidence: "Uses a full stop at the end of a statement."
-  },
-  {
-    id: "M3",
-    standard: "4.3.3",
-    title: "Word Rescue",
-    instruction: "Blast the words in the correct order.",
-    type: "sequence",
-    position: new THREE.Vector3(0, 1.9, -13),
-    choices: ["blue", "I", "bag.", "a", "have"],
-    sequence: ["I", "have", "a", "blue", "bag."],
-    hint: "Start with ‘I’. Next, tell what you have.",
-    evidence: "Plans and arranges words to form a simple sentence."
-  },
-  {
-    id: "M4",
-    standard: "4.3.1 & 4.3.3",
-    title: "Guided Writing Lab",
-    instruction: "Go to the WRITE station and describe the blue box.",
-    type: "writing",
-    position: new THREE.Vector3(0, 1.75, -25),
-    targetText: "WRITE",
-    icon: "📦",
-    scene: "A blue box",
-    prompt: "Write a sentence about the box.",
-    plan: ["Who? The box", "Action? is", "What? blue"],
-    accepted: ["the box is blue", "this is a blue box", "it is a blue box"],
-    hint: "Begin with ‘The’. Remember the full stop.",
-    evidence: "Plans, drafts and writes a guided simple sentence."
-  },
-  {
-    id: "M5",
-    standard: "4.3.1 & 4.3.3",
-    title: "Final Sentence Boss",
-    instruction: "Reach the FINAL WRITE station and write independently.",
-    type: "writing",
-    position: new THREE.Vector3(0, 2.05, -38),
-    targetText: "FINAL WRITE",
-    icon: "🪁",
-    scene: "A boy flying a kite",
-    prompt: "Write one sentence about the picture.",
-    plan: [],
-    accepted: ["the boy is flying a kite", "a boy is flying a kite", "he is flying a kite"],
-    hint: "Who can you see? What is he doing?",
-    evidence: "Drafts and writes a simple sentence independently."
-  }
+const STAGE_POSITIONS = [
+  new THREE.Vector3(0, 1.9, 10),
+  new THREE.Vector3(0, 1.9, -1),
+  new THREE.Vector3(0, 1.9, -13),
+  new THREE.Vector3(0, 1.75, -25),
+  new THREE.Vector3(0, 2.05, -38)
 ];
+const MAX_POINTS_PER_QUESTION = 10;
+
+const capitalQuestions = [
+  ["my cat is black.", ["my", "MY", "My"], "My"],
+  ["she has a red dress.", ["SHE", "She", "she"], "She"],
+  ["he is my brother.", ["he", "He", "HE"], "He"],
+  ["this is my school.", ["This", "THIS", "this"], "This"],
+  ["the dog is running.", ["the", "THE", "The"], "The"],
+  ["i like apples.", ["i", "I", "iI"], "I"],
+  ["we play football.", ["WE", "we", "We"], "We"],
+  ["they are happy.", ["They", "they", "THEY"], "They"],
+  ["it is a blue bag.", ["it", "It", "IT"], "It"],
+  ["our teacher is kind.", ["OUR", "Our", "our"], "Our"]
+].map((item, index) => ({
+  bankId: `C${index + 1}`, standard: "4.3.1", title: "Capital Blast", type: "choice",
+  instruction: `Choose the correct first word: ${item[0]}`, choices: item[1], correct: item[2],
+  hint: "A sentence begins with one capital letter.", evidence: "Uses a capital letter at the beginning of a sentence."
+}));
+
+const punctuationQuestions = [
+  "I like ice cream", "She has a doll", "The bird can fly", "This is my pencil", "He is wearing a hat",
+  "We go to school", "My bag is blue", "The cat is sleeping", "They play football", "It is a sunny day"
+].map((sentence, index) => ({
+  bankId: `P${index + 1}`, standard: "4.3.1", title: "Full Stop Factory", type: "choice",
+  instruction: `${sentence} ___  Choose the correct punctuation.`, choices: index % 2 ? ["!", "?", "."] : ["?", ".", "!"], correct: ".",
+  hint: "This is a statement. It ends with a full stop.", evidence: "Uses a full stop at the end of a statement."
+}));
+
+const sequenceSentences = [
+  ["I", "have", "a", "blue", "bag."], ["She", "has", "a", "red", "dress."],
+  ["He", "is", "my", "good", "friend."], ["The", "cat", "is", "sleeping."],
+  ["We", "play", "in", "the", "park."], ["This", "is", "my", "pencil."],
+  ["The", "bird", "can", "fly."], ["My", "mother", "is", "kind."],
+  ["They", "are", "very", "happy."], ["It", "is", "a", "big", "box."]
+];
+const sequenceQuestions = sequenceSentences.map((words, index) => ({
+  bankId: `S${index + 1}`, standard: "4.3.3", title: "Word Rescue", type: "sequence",
+  instruction: "Blast the words in the correct order.", choices: shuffledCopy(words), sequence: words,
+  hint: `Begin with “${words[0]}”. Read the sentence aloud.`, evidence: "Plans and arranges words to form a simple sentence."
+}));
+
+const guidedQuestions = [
+  ["📦", "A blue box", "Write a sentence about the box.", ["Who? The box", "Action? is", "What? blue"], ["the box is blue", "this is a blue box", "it is a blue box"]],
+  ["⚽", "A red ball", "Write a sentence about the ball.", ["Who? The ball", "Action? is", "What? red"], ["the ball is red", "this is a red ball", "it is a red ball"]],
+  ["🐈", "A cat sleeping", "Write a sentence about the cat.", ["Who? The cat", "Action? is sleeping"], ["the cat is sleeping", "a cat is sleeping", "it is sleeping"]],
+  ["👧📖", "A girl reading", "Write a sentence about the girl.", ["Who? The girl", "Action? is reading"], ["the girl is reading", "a girl is reading", "she is reading"]],
+  ["👦🏃", "A boy running", "Write a sentence about the boy.", ["Who? The boy", "Action? is running"], ["the boy is running", "a boy is running", "he is running"]],
+  ["🐕🍚", "A dog eating", "Write a sentence about the dog.", ["Who? The dog", "Action? is eating"], ["the dog is eating", "a dog is eating", "it is eating"]],
+  ["👧👦🎲", "Children playing", "Write a sentence about the children.", ["Who? The children", "Action? are playing"], ["the children are playing", "two children are playing", "they are playing"]],
+  ["🐦🌳", "A bird in a tree", "Write a sentence about the bird.", ["Who? The bird", "Where? in the tree"], ["the bird is in the tree", "a bird is in the tree", "it is in the tree"]]
+].map((item, index) => ({
+  bankId: `G${index + 1}`, standard: "4.3.1 & 4.3.3", title: "Guided Writing Lab", type: "writing",
+  instruction: "Reach the WRITE station and write a guided sentence.", targetText: "WRITE", icon: item[0], scene: item[1],
+  prompt: item[2], plan: item[3], accepted: item[4], hint: "Use the planning clues. Begin with a capital letter and end with a full stop.",
+  evidence: "Plans, drafts and writes a guided simple sentence."
+}));
+
+const independentQuestions = [
+  ["🪁", "A boy flying a kite", ["the boy is flying a kite", "a boy is flying a kite", "he is flying a kite"]],
+  ["🏊", "A girl swimming", ["the girl is swimming", "a girl is swimming", "she is swimming"]],
+  ["🚲", "A boy riding a bicycle", ["the boy is riding a bicycle", "a boy is riding a bicycle", "he is riding a bicycle"]],
+  ["🍎", "A girl eating an apple", ["the girl is eating an apple", "a girl is eating an apple", "she is eating an apple"]],
+  ["🐕⚽", "A dog playing with a ball", ["the dog is playing with a ball", "a dog is playing with a ball", "it is playing with a ball"]]
+].map((item, index) => ({
+  bankId: `I${index + 1}`, standard: "4.3.1 & 4.3.3", title: "Final Sentence Boss", type: "writing", independent: true,
+  instruction: "Reach the FINAL WRITE station and write independently.", targetText: "FINAL WRITE", icon: item[0], scene: item[1],
+  prompt: "Write one sentence about the picture.", plan: [], accepted: item[2], hint: "Who can you see? What is happening?",
+  evidence: "Drafts and writes a simple sentence independently."
+}));
+
+let activeMissions = [];
 
 const state = {
   phase: "loading",
   session: null,
   student: "",
+  className: "",
   score: 0,
   health: 100,
   hintsLeft: 3,
+  hintsTotal: 3,
   missionIndex: -1,
   missionStartedAt: 0,
   startedAt: 0,
@@ -170,6 +181,40 @@ const state = {
   submissionId: "",
   pausedByModal: false
 };
+
+function shuffledCopy(items) {
+  const copy = items.slice();
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swap]] = [copy[swap], copy[index]];
+  }
+  return copy;
+}
+
+function pickQuestions(pool, count) {
+  return shuffledCopy(pool).slice(0, count).map((question) => ({ ...question }));
+}
+
+function buildMissionSet(requestedCount) {
+  const count = [10, 15, 20].includes(Number(requestedCount)) ? Number(requestedCount) : 15;
+  const distribution = {
+    10: { capital: 3, punctuation: 3, sequence: 2, guided: 1, independent: 1 },
+    15: { capital: 4, punctuation: 4, sequence: 4, guided: 2, independent: 1 },
+    20: { capital: 5, punctuation: 5, sequence: 5, guided: 3, independent: 2 }
+  }[count];
+  const regular = shuffledCopy([
+    ...pickQuestions(capitalQuestions, distribution.capital),
+    ...pickQuestions(punctuationQuestions, distribution.punctuation),
+    ...pickQuestions(sequenceQuestions, distribution.sequence),
+    ...pickQuestions(guidedQuestions, distribution.guided)
+  ]);
+  const finalWriting = pickQuestions(independentQuestions, distribution.independent);
+  return [...regular, ...finalWriting].map((mission, index) => ({
+    ...mission,
+    id: `Q${String(index + 1).padStart(2, "0")}-${mission.bankId}`,
+    position: STAGE_POSITIONS[index % STAGE_POSITIONS.length].clone()
+  }));
+}
 
 let scene;
 let camera;
@@ -599,11 +644,12 @@ async function verifySessionCode() {
     const session = await getSession(code);
     if (!session?.active) throw new Error(session?.message || "This class code is not active.");
     state.session = session;
-    populateStudents(session.students || []);
-    dom.sessionClass.textContent = session.className || "Class";
+    dom.studentName.value = "";
+    dom.className.value = "";
+    dom.sessionClass.textContent = `${session.questionCount || 15} QUESTIONS`;
     dom.sessionTitle.textContent = session.title || "Writing Mission";
     dom.studentFields.classList.remove("hidden");
-    setCodeStatus("Code accepted. Choose your name.", false, true);
+    setCodeStatus("Code accepted. Type your name and class.", false, true);
   } catch (error) {
     state.session = null;
     dom.studentFields.classList.add("hidden");
@@ -611,16 +657,6 @@ async function verifySessionCode() {
   } finally {
     dom.verifyCode.disabled = false;
   }
-}
-
-function populateStudents(students) {
-  dom.studentName.innerHTML = '<option value="">Choose your name</option>';
-  students.forEach((name) => {
-    const option = document.createElement("option");
-    option.value = name;
-    option.textContent = name;
-    dom.studentName.append(option);
-  });
 }
 
 function setCodeStatus(message, isError = false, isSuccess = false) {
@@ -634,14 +670,32 @@ async function startGameFromForm(event) {
     await verifySessionCode();
     if (!state.session) return;
   }
-  if (!dom.studentName.value) {
-    showToast("Choose your name first.", "error");
+  const studentName = dom.studentName.value.trim().replace(/\s+/g, " ");
+  const className = dom.className.value.trim().replace(/\s+/g, " ");
+  if (studentName.length < 2) {
+    showToast("Type your full name first.", "error");
     dom.studentName.focus();
+    return;
+  }
+  if (!className) {
+    showToast("Type your class first.", "error");
+    dom.className.focus();
     return;
   }
 
   initAudio();
-  state.student = dom.studentName.value;
+  state.student = studentName;
+  state.className = className;
+  activeMissions = buildMissionSet(state.session.questionCount);
+  state.score = 0;
+  state.health = 100;
+  state.hintsLeft = Math.max(5, Math.ceil(activeMissions.length / 3));
+  state.hintsTotal = state.hintsLeft;
+  state.details = [];
+  state.shots = 0;
+  state.correctShots = 0;
+  dom.hudScore.textContent = `0/${activeMissions.length * MAX_POINTS_PER_QUESTION}`;
+  dom.hintCount.textContent = state.hintsLeft;
   state.startedAt = Date.now();
   state.phase = "playing";
   player.position.set(0, 1.65, 21);
@@ -649,7 +703,7 @@ async function startGameFromForm(event) {
   player.pitch = 0;
   camera.position.copy(player.position);
   dom.hudName.textContent = state.student;
-  dom.hudClass.textContent = state.session.className;
+  dom.hudClass.textContent = state.className;
   dom.startScreen.classList.remove("active");
   dom.hud.classList.remove("hidden");
   if (IS_TOUCH) {
@@ -667,6 +721,13 @@ async function startGameFromForm(event) {
 
 function startMission(index) {
   clearMissionObjects();
+  if (index > 0 && index % STAGE_POSITIONS.length === 0) {
+    player.position.set(0, 1.65, 21);
+    player.yaw = 0;
+    player.pitch = 0;
+    camera.position.copy(player.position);
+    showToast(`Round ${Math.floor(index / STAGE_POSITIONS.length) + 1} begins!`, "success");
+  }
   state.phase = "playing";
   state.missionIndex = index;
   state.currentSequence = [];
@@ -676,8 +737,8 @@ function startMission(index) {
   state.currentHintsUsed = 0;
   state.missionStartedAt = Date.now();
   guardFireTimer = 2.2 + Math.random() * 1.4;
-  const mission = missions[index];
-  dom.missionNumber.textContent = `MISSION ${index + 1} / ${missions.length}`;
+  const mission = activeMissions[index];
+  dom.missionNumber.textContent = `MISSION ${index + 1} / ${activeMissions.length}`;
   dom.missionTitle.textContent = mission.title;
   dom.missionInstruction.textContent = mission.instruction;
   dom.sentenceStrip.classList.add("hidden");
@@ -736,29 +797,19 @@ function spawnSequenceTargets(mission) {
     activeTargetGroup.add(target);
   });
   scene.add(activeTargetGroup);
-  dom.sentenceProgress.textContent = "_ _ _ _ _";
+  dom.sentenceProgress.textContent = "_ ".repeat(mission.sequence.length).trim();
   dom.sentenceStrip.classList.remove("hidden");
 }
 
 function spawnWritingTarget(mission) {
   activeTargetGroup = new THREE.Group();
   activeTargetGroup.position.copy(mission.position);
-  const target = makeTextTarget(mission.targetText, mission.id === "M5" ? 0xff5f70 : 0x57e38d, mission.id === "M5" ? 5 : 3.8, 1.45);
+  const target = makeTextTarget(mission.targetText, mission.independent ? 0xff5f70 : 0x57e38d, mission.independent ? 5 : 3.8, 1.45);
   target.userData = { hitTarget: true, missionId: mission.id, value: "write", correct: true };
   activeTargets.push(target);
   activeTargetGroup.add(target);
   scene.add(activeTargetGroup);
 
-  if (mission.id === "M4") {
-    const blueBox = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 1.6, 1.6),
-      new THREE.MeshStandardMaterial({ color: 0x2f8df5, roughness: .66 })
-    );
-    blueBox.position.set(mission.position.x - 3.3, .82, mission.position.z + .5);
-    blueBox.castShadow = !IS_TOUCH;
-    blueBox.userData.temporaryMissionObject = true;
-    activeTargetGroup.add(blueBox);
-  }
 }
 
 function makeTextTarget(text, accent = 0x3ee7ff, width = 2.8, height = 1.35) {
@@ -796,15 +847,15 @@ function spawnGuard(mission) {
   if (!gltf?.scene) {
     currentGuard = new THREE.Mesh(
       new THREE.CapsuleGeometry(.55, 1.05, 8, 16),
-      new THREE.MeshStandardMaterial({ color: mission.id === "M5" ? 0xed3d55 : 0xffb443, roughness: .45 })
+      new THREE.MeshStandardMaterial({ color: mission.independent ? 0xed3d55 : 0xffb443, roughness: .45 })
     );
     currentGuard.position.set(4.6, 1.05, mission.position.z - 1.5);
     scene.add(currentGuard);
     return;
   }
   currentGuard = cloneSkeleton(gltf.scene);
-  normalizeModel(currentGuard, mission.id === "M5" ? 3.2 : 2.25);
-  currentGuard.position.set(mission.id === "M5" ? 4.4 : 4.1, 0, mission.position.z - .7);
+  normalizeModel(currentGuard, mission.independent ? 3.2 : 2.25);
+  currentGuard.position.set(mission.independent ? 4.4 : 4.1, 0, mission.position.z - .7);
   currentGuard.rotation.y = Math.PI;
   currentGuard.traverse((child) => {
     if (child.isMesh) {
@@ -838,7 +889,7 @@ function fireBlaster() {
   weapon.rotation.x = -.18;
   setTimeout(() => { if (muzzleFlash) muzzleFlash.intensity = 0; }, 55);
 
-  const mission = missions[state.missionIndex];
+  const mission = activeMissions[state.missionIndex];
   if (mission && player.position.distanceTo(mission.position) > 18) {
     spawnShotParticle(camera.getWorldDirection(new THREE.Vector3()));
     showToast("Move closer to the glowing mission station.");
@@ -864,7 +915,7 @@ function fireBlaster() {
 }
 
 function hitTarget(target) {
-  const mission = missions[state.missionIndex];
+  const mission = activeMissions[state.missionIndex];
   flashHitMarker();
   pulseTarget(target);
   if (mission.type === "choice") {
@@ -908,11 +959,11 @@ function completeMission(answerData) {
   if (state.missionLocked) return;
   state.missionLocked = true;
   state.phase = "transition";
-  const mission = missions[state.missionIndex];
+  const mission = activeMissions[state.missionIndex];
   const elapsedSeconds = Math.round((Date.now() - state.missionStartedAt) / 1000);
-  const points = Math.max(8, 20 - state.wrongAttempts * 2 - state.currentHintsUsed);
+  const points = Math.max(3, MAX_POINTS_PER_QUESTION - state.wrongAttempts * 2 - state.currentHintsUsed);
   state.score += points;
-  dom.hudScore.textContent = state.score;
+  dom.hudScore.textContent = `${state.score}/${activeMissions.length * MAX_POINTS_PER_QUESTION}`;
   state.details.push({
     missionId: mission.id,
     title: mission.title,
@@ -930,7 +981,7 @@ function completeMission(answerData) {
   objectiveBeacon.visible = false;
   showToast(`Mission repaired! +${points} points`, "success");
   setTimeout(() => {
-    if (state.missionIndex < missions.length - 1) startMission(state.missionIndex + 1);
+    if (state.missionIndex < activeMissions.length - 1) startMission(state.missionIndex + 1);
     else finishGame();
   }, 1350);
 }
@@ -941,7 +992,7 @@ function openWriting(mission) {
   state.phase = "writing";
   document.exitPointerLock?.();
   dom.mobileControls.classList.add("hidden");
-  dom.writingStep.textContent = mission.id === "M5" ? "INDEPENDENT WRITING" : "GUIDED WRITING";
+  dom.writingStep.textContent = mission.independent ? "INDEPENDENT WRITING" : "GUIDED WRITING";
   dom.writingTitle.textContent = mission.prompt;
   dom.sceneIcon.textContent = mission.icon;
   dom.sceneDescription.textContent = mission.scene;
@@ -1014,7 +1065,7 @@ function useHint() {
   state.hintsLeft -= 1;
   state.currentHintsUsed += 1;
   dom.hintCount.textContent = state.hintsLeft;
-  showToast(missions[state.missionIndex].hint);
+  showToast(activeMissions[state.missionIndex].hint);
 }
 
 function useWritingHint() {
@@ -1054,15 +1105,17 @@ async function finishGame() {
   dom.mobileControls.classList.add("hidden");
   const elapsedSeconds = Math.round((Date.now() - state.startedAt) / 1000);
   const accuracy = state.shots ? Math.round((state.correctShots / state.shots) * 100) : 100;
-  const grade = state.score >= 90 ? "A" : state.score >= 75 ? "B" : state.score >= 60 ? "C" : "D";
+  const maximumScore = activeMissions.length * MAX_POINTS_PER_QUESTION;
+  const percentageScore = Math.round((state.score / maximumScore) * 100);
+  const grade = percentageScore >= 90 ? "A" : percentageScore >= 75 ? "B" : percentageScore >= 60 ? "C" : "D";
   dom.resultBadge.textContent = grade;
-  dom.finalScore.textContent = `${state.score}/100`;
+  dom.finalScore.textContent = `${percentageScore}/100`;
   dom.finalAccuracy.textContent = `${accuracy}%`;
   dom.finalTime.textContent = formatTime(elapsedSeconds);
-  dom.resultSummary.textContent = `${state.student}, you completed all five writing missions.`;
+  dom.resultSummary.textContent = `${state.student}, you completed all ${activeMissions.length} questions.`;
   dom.standardResults.innerHTML = [
-    standardSummary("4.3.1", "Capital letters and full stops", [0, 1, 3, 4]),
-    standardSummary("4.3.3", "Plan, draft and write simple sentences", [2, 3, 4])
+    standardSummary("4.3.1", "Capital letters and full stops"),
+    standardSummary("4.3.3", "Plan, draft and write simple sentences")
   ].join("");
   dom.resultScreen.classList.add("active");
 
@@ -1071,13 +1124,13 @@ async function finishGame() {
     sessionId: state.session.id,
     sessionCode: state.session.code,
     studentName: state.student,
-    className: state.session.className,
-    gameVersion: CONFIG.gameVersion || "1.0.0",
-    score: state.score,
+    className: state.className,
+    gameVersion: CONFIG.gameVersion || "1.1.0",
+    score: percentageScore,
     accuracy,
     shots: state.shots,
     correctShots: state.correctShots,
-    hintsUsed: 3 - state.hintsLeft,
+    hintsUsed: state.hintsTotal - state.hintsLeft,
     elapsedSeconds,
     completedAt: new Date().toISOString(),
     details: state.details
@@ -1089,9 +1142,10 @@ async function finishGame() {
     : "Result saved on this device. Ask your teacher to check the game connection.";
 }
 
-function standardSummary(code, label, missionIndexes) {
-  const possible = missionIndexes.length * 20;
-  const earned = missionIndexes.reduce((sum, index) => sum + (state.details[index]?.points || 0), 0);
+function standardSummary(code, label) {
+  const evidence = state.details.filter((detail) => detail.standard.includes(code));
+  const possible = evidence.length * MAX_POINTS_PER_QUESTION;
+  const earned = evidence.reduce((sum, detail) => sum + (detail.points || 0), 0);
   const percentage = Math.round((earned / possible) * 100);
   return `<div class="standard-row"><div><strong>${code}</strong><span>${label}</span></div><strong>${percentage}%</strong></div>`;
 }
@@ -1301,7 +1355,7 @@ function damagePlayer(amount) {
     : "linear-gradient(90deg,#57e38d,#3ee7ff)";
   playTone("error");
   if (state.health <= 0) {
-    const mission = missions[state.missionIndex];
+    const mission = activeMissions[state.missionIndex];
     state.score = Math.max(0, state.score - 5);
     dom.hudScore.textContent = state.score;
     state.health = 100;

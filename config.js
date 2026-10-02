@@ -4,5 +4,5 @@ window.SENTENCE_BLASTER_CONFIG = {
   demoCode: "1234",
   demoMode: true,
   schoolName: "SK Minyak Beku",
-  gameVersion: "1.0.0"
+  gameVersion: "1.1.0"
 };

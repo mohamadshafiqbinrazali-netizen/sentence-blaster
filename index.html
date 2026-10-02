@@ -54,12 +54,14 @@
             <div id="student-fields" class="hidden">
               <div class="field-row">
                 <label for="student-name">Your name</label>
-                <select id="student-name" name="studentName" required>
-                  <option value="">Choose your name</option>
-                </select>
+                <input id="student-name" name="studentName" maxlength="80" autocomplete="name" placeholder="Type your full name" required />
+              </div>
+              <div class="field-row">
+                <label for="class-name">Your class</label>
+                <input id="class-name" name="className" maxlength="40" autocomplete="organization" placeholder="Example: 2 Bestari" required />
               </div>
               <div class="session-pill">
-                <span id="session-class">2 Bestari</span>
+                <span id="session-class">OPEN SESSION</span>
                 <strong id="session-title">Capital Letters &amp; Full Stops</strong>
               </div>
               <button id="start-game" class="button primary" type="submit">Start mission</button>
@@ -82,7 +84,7 @@
             <small id="hud-class">Class</small>
           </div>
           <div class="mission-panel">
-            <span id="mission-number">MISSION 1 / 5</span>
+            <span id="mission-number">MISSION 1 / 15</span>
             <strong id="mission-title">Capital Blast</strong>
             <p id="mission-instruction">Find the sentence station.</p>
           </div>
